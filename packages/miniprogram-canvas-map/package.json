@@ -1,6 +1,6 @@
 {
   "name": "miniprogram-canvas-map",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "微信小程序 Canvas 地图组件：矢量面、点线面叠加、瓦片底图、缩放飞行与导出",
   "miniprogram": "miniprogram",
   "main": "miniprogram/canvas-map/canvas-map.js",
@@ -18,17 +18,17 @@
     "mercator",
     "tiles"
   ],
-  "author": "",
+  "author": "yehan68",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YOUR_GITHUB_USERNAME/miniprogram-canvas-map.git",
+    "url": "git+https://github.com/yehan68/miniprogram-canvas-map",
     "directory": "packages/miniprogram-canvas-map"
   },
   "bugs": {
-    "url": "https://github.com/YOUR_GITHUB_USERNAME/miniprogram-canvas-map/issues"
+    "url": "https://github.com/yehan68/miniprogram-canvas-map/issues"
   },
-  "homepage": "https://github.com/YOUR_GITHUB_USERNAME/miniprogram-canvas-map#readme",
+  "homepage": "https://github.com/yehan68/miniprogram-canvas-map#readme",
   "engines": {
     "node": ">=14"
   },
