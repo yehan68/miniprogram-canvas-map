@@ -1,6 +1,6 @@
 {
   "name": "miniprogram-canvas-map",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "微信小程序 Canvas 地图组件：矢量面、点线面叠加、瓦片底图、缩放飞行与导出",
   "miniprogram": "miniprogram",
   "main": "miniprogram/canvas-map/canvas-map.js",

@@ -1,4 +1,6 @@
 const defaultGeoJson = require("miniprogram-canvas-map/miniprogram/canvas-map/data/world");
+const { buildCountryLabelsOverlay } = require("./country-labels");
+const { drawCountryTag } = require("./draw-country-tag");
 
 const PROJECTION = {
   MERCATOR: "mercator",
@@ -96,7 +98,8 @@ const OVERLAY_PRESETS = {
       }
     ]
   },
-  clear: { points: [], lines: [], polygons: [] }
+  clear: { points: [], lines: [], polygons: [] },
+  countryLabels: buildCountryLabelsOverlay()
 };
 
 const TILE_PRESETS = {
@@ -179,15 +182,15 @@ Page({
     theme: "warm",
     background: BG_PRESETS.solid,
     bgPreset: "solid",
-    tiles: "off",
-    tilePreset: "off",
+    tiles: "carto",
+    tilePreset: "carto",
     token: "",
-    hideVectorWhenTiles: false,
-    polygons: defaultGeoJson,
-    overlay: null,
-    basePreset: "world",
-    overlayPreset: "empty",
-    pointRenderPreset: "circle",
+    hideVectorWhenTiles: true,
+    polygons: null,
+    overlay: buildCountryLabelsOverlay(),
+    basePreset: "empty",
+    overlayPreset: "countryLabels",
+    pointRenderPreset: "custom",
     lastTapText: "点击地图上的点/线/面",
     selectedLabel: "未选中",
     apiProperties: [
@@ -251,6 +254,18 @@ Page({
       }
     }
     this.setupPointDrawer();
+    if (this.data.overlayPreset === "countryLabels") {
+      const map = this.getMap();
+      if (map && typeof map.flyTo === "function") {
+        map.flyTo(
+          [
+            [-18, -35],
+            [55, 58]
+          ],
+          { animate: false, padding: 0.08 }
+        );
+      }
+    }
   },
 
   onZoom(event) {
@@ -287,6 +302,10 @@ Page({
   setupPointDrawer() {
     const map = this.getMap();
     if (!map || typeof map.setPointDrawer !== "function") {
+      return;
+    }
+    if (this.data.overlayPreset === "countryLabels") {
+      map.setPointDrawer(drawCountryTag);
       return;
     }
     map.setPointDrawer((ctx, payload) => {
@@ -515,12 +534,38 @@ Page({
       return;
     }
     const renderMap = { circle: "", pin: "pin", diamond: "diamond", custom: "custom" };
-    const overlay =
-      preset === "empty" ? null : cloneOverlayWithPointRender(overlaySource, renderMap[this.data.pointRenderPreset] || "");
-    this.setData({ overlayPreset: preset, overlay });
+    let pointRenderPreset = this.data.pointRenderPreset;
+    let overlay = null;
+
+    if (preset === "empty") {
+      overlay = null;
+    } else if (preset === "countryLabels") {
+      overlay = buildCountryLabelsOverlay();
+      pointRenderPreset = "custom";
+    } else {
+      overlay = cloneOverlayWithPointRender(overlaySource, renderMap[pointRenderPreset] || "");
+    }
+
+    this.setData({ overlayPreset: preset, overlay, pointRenderPreset });
     const map = this.getMap();
-    if (map && typeof map.setOverlay === "function") {
-      map.setOverlay(overlay);
+    if (map) {
+      if (pointRenderPreset === "custom") {
+        this.setupPointDrawer();
+      } else if (typeof map.setPointDrawer === "function") {
+        map.setPointDrawer(null);
+      }
+      if (typeof map.setOverlay === "function") {
+        map.setOverlay(overlay);
+      }
+      if (preset === "countryLabels" && typeof map.flyTo === "function") {
+        map.flyTo(
+          [
+            [-18, -35],
+            [55, 58]
+          ],
+          { animate: true, padding: 0.08, duration: 500 }
+        );
+      }
     }
   },
 

@@ -118,7 +118,7 @@
 
     <view class="control-section">
       <text class="control-section__title">视图操作</text>
-      <text class="control-section__desc">双指连续缩放，松手吸附最近层级；方法 zoom(level) / flyTo(target)。</text>
+      <text class="control-section__desc">双指以触控中心缩放（松手缓动吸附层级）；双击放大；zoom(level) / flyTo(target)。</text>
       <view class="chip-row">
         <view class="chip chip--primary" bindtap="onMapReset">复位视图</view>
         <view class="chip chip--primary" bindtap="onFlyToSelected">飞往选中</view>
@@ -179,13 +179,18 @@
 
     <view class="control-section">
       <text class="control-section__title">叠加层（点线面）</text>
-      <text class="control-section__desc">属性 overlay，可选。不传则无点线面叠加。</text>
+      <text class="control-section__desc">属性 overlay。「国家标注」为白底胶囊 + 黄点 + 中文国名（custom + setPointDrawer）。</text>
       <view class="chip-row">
         <view
           class="chip {{overlayPreset === 'empty' ? 'is-active' : ''}}"
           data-preset="empty"
           bindtap="onOverlayPresetChange"
         >空</view>
+        <view
+          class="chip {{overlayPreset === 'countryLabels' ? 'is-active' : ''}}"
+          data-preset="countryLabels"
+          bindtap="onOverlayPresetChange"
+        >国家标注</view>
         <view
           class="chip {{overlayPreset === 'default' ? 'is-active' : ''}}"
           data-preset="default"

@@ -15,8 +15,8 @@ const MERCATOR_MAX_LAT = 85.05112878;
 const MAP_ZOOM_MIN = 1;
 const MAP_ZOOM_MAX = 18;
 const DEFAULT_FLY_DURATION = 400;
-const DEFAULT_ZOOM_ANIMATE_DURATION = 280;
-const ZOOM_SNAP_DURATION = 200;
+const DEFAULT_ZOOM_ANIMATE_DURATION = 350;
+const ZOOM_SNAP_DURATION = 320;
 const DEFAULT_FLY_ZOOM = 10;
 const DEFAULT_FLY_PADDING = 0.12;
 
@@ -892,7 +892,7 @@ function drawOverlayLayersNorm(context, overlayLayers, state) {
         context.stroke();
       }
     }
-    if (point.label) {
+    if (point.label && !useCustom) {
       context.fillStyle = point.labelColor;
       context.font = `${normPx(point.labelFontSize)}px sans-serif`;
       context.fillText(point.label, pr.x + radiusNorm + labelOffset, pr.y + labelOffset);
@@ -1309,12 +1309,37 @@ function getScaleRangeForLimits(state, limits) {
   };
 }
 
+function getScreenViewTransform(state) {
+  const mapSize = getMapSize(state.currentProjection);
+  const mapScale = Math.max(state.mapView.scale || 1, 0.0001);
+  return {
+    tx: state.baseView.offsetX + state.mapView.offsetX,
+    ty: state.baseView.offsetY + state.mapView.offsetY,
+    sx: mapSize.width * state.baseView.scale * mapScale,
+    sy: mapSize.height * state.baseView.scale * mapScale,
+    mapScale
+  };
+}
+
+/** 以屏幕坐标 anchor 为焦点缩放（保持锚点下地理内容不动） */
 function applyScaleAtAnchor(state, nextScale, anchor) {
-  const prevScale = Math.max(state.mapView.scale || 1, 0.0001);
-  const ratio = nextScale / prevScale;
+  const anchorPoint = anchor || {
+    x: state.canvasWidth / 2,
+    y: state.canvasHeight / 2
+  };
+  const view = getScreenViewTransform(state);
+  const ratio = nextScale / view.mapScale;
+  const nx = (anchorPoint.x - view.tx) / view.sx;
+  const ny = (anchorPoint.y - view.ty) / view.sy;
+  const mapSize = getMapSize(state.currentProjection);
+  const sxNew = mapSize.width * state.baseView.scale * nextScale;
+  const syNew = mapSize.height * state.baseView.scale * nextScale;
+  const txNew = anchorPoint.x - nx * sxNew;
+  const tyNew = anchorPoint.y - ny * syNew;
+
   state.mapView.scale = nextScale;
-  state.mapView.offsetX = anchor.x - (anchor.x - state.mapView.offsetX) * ratio;
-  state.mapView.offsetY = anchor.y - (anchor.y - state.mapView.offsetY) * ratio;
+  state.mapView.offsetX = txNew - state.baseView.offsetX;
+  state.mapView.offsetY = tyNew - state.baseView.offsetY;
 }
 
 function computeViewAtZoom(state, mapZoom, anchor) {
@@ -1323,17 +1348,53 @@ function computeViewAtZoom(state, mapZoom, anchor) {
     x: state.canvasWidth / 2,
     y: state.canvasHeight / 2
   };
-  const prevScale = Math.max(state.mapView.scale || 1, 0.0001);
-  const ratio = scale / prevScale;
+  const view = getScreenViewTransform(state);
+  const ratio = scale / view.mapScale;
+  const nx = (anchorPoint.x - view.tx) / view.sx;
+  const ny = (anchorPoint.y - view.ty) / view.sy;
+  const mapSize = getMapSize(state.currentProjection);
+  const sxNew = mapSize.width * state.baseView.scale * scale;
+  const syNew = mapSize.height * state.baseView.scale * scale;
   return {
     mapZoom,
     scale,
-    offsetX: anchorPoint.x - (anchorPoint.x - state.mapView.offsetX) * ratio,
-    offsetY: anchorPoint.y - (anchorPoint.y - state.mapView.offsetY) * ratio
+    offsetX: anchorPoint.x - nx * sxNew - state.baseView.offsetX,
+    offsetY: anchorPoint.y - ny * syNew - state.baseView.offsetY
   };
 }
 
-function runViewAnimation(state, component, from, to, duration, onComplete) {
+/**
+ * 双指连续缩放：以 lastCenter 对应地图点为基准，缩放后该点落在 center 下（与高德一致）
+ */
+function applyPinchGesture(state, lastCenter, center, scaleFactor, limits) {
+  if (!state || !center) {
+    return;
+  }
+  const focal = lastCenter || center;
+  const view = getScreenViewTransform(state);
+  const nx = (focal.x - view.tx) / view.sx;
+  const ny = (focal.y - view.ty) / view.sy;
+  const range = getScaleRangeForLimits(state, limits);
+  const nextScale =
+    scaleFactor && scaleFactor !== 1
+      ? clamp(view.mapScale * scaleFactor, range.min, range.max)
+      : view.mapScale;
+  const mapSize = getMapSize(state.currentProjection);
+  const sxNew = mapSize.width * state.baseView.scale * nextScale;
+  const syNew = mapSize.height * state.baseView.scale * nextScale;
+  const txNew = center.x - nx * sxNew;
+  const tyNew = center.y - ny * syNew;
+
+  state.mapView.scale = nextScale;
+  state.mapView.offsetX = txNew - state.baseView.offsetX;
+  state.mapView.offsetY = tyNew - state.baseView.offsetY;
+}
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function runViewAnimation(state, component, from, to, duration, onComplete, easing) {
   cancelViewAnimation(state);
   if (!duration || duration <= 0) {
     state.mapView.offsetX = to.offsetX;
@@ -1358,7 +1419,7 @@ function runViewAnimation(state, component, from, to, duration, onComplete) {
 
   const step = () => {
     const progress = clamp((Date.now() - startTime) / duration, 0, 1);
-    const eased = easeInOutCubic(progress);
+    const eased = easing === "out" ? easeOutCubic(progress) : easeInOutCubic(progress);
     state.mapView.offsetX = from.offsetX + (to.offsetX - from.offsetX) * eased;
     state.mapView.offsetY = from.offsetY + (to.offsetY - from.offsetY) * eased;
     state.mapView.scale = from.scale + (to.scale - from.scale) * eased;
@@ -3147,7 +3208,7 @@ Component({
       }
 
       const component = this;
-      runViewAnimation(state, component, from, to, duration, () => finish());
+      runViewAnimation(state, component, from, to, duration, () => finish(), "out");
       return true;
     },
 
@@ -3208,7 +3269,7 @@ Component({
         return true;
       }
 
-      runViewAnimation(state, component, from, to, duration, onDone);
+      runViewAnimation(state, component, from, to, duration, onDone, "out");
       return true;
     },
 
@@ -3384,17 +3445,15 @@ Component({
       this.animateMapZoomTo((state.mapZoom || limits.min) + 1, tapPoint, { duration: ZOOM_SNAP_DURATION });
     },
 
-    applyPinchZoomRatio(scale, origin) {
+    applyPinchZoomRatio(scale, origin, lastCenter) {
       const state = this._state;
-      if (!state || !origin || !scale || scale === 1) {
+      if (!state || !origin) {
         return;
       }
 
       cancelViewAnimation(state);
       const limits = this.getMapZoomLimitsFromProps();
-      const range = getScaleRangeForLimits(state, limits);
-      const nextScale = clamp((state.mapView.scale || 1) * scale, range.min, range.max);
-      applyScaleAtAnchor(state, nextScale, origin);
+      applyPinchGesture(state, lastCenter || origin, origin, scale || 1, limits);
       this.scheduleDraw();
     },
 
@@ -3539,10 +3598,10 @@ Component({
 
         if (state.touchState.lastDistance > 0 && distance > 0) {
           const scale = distance / state.touchState.lastDistance;
-          this.applyPan(center.x - state.touchState.lastCenter.x, center.y - state.touchState.lastCenter.y);
-          if (scale <= 0.99 || scale >= 1.01) {
-            this.applyPinchZoomRatio(scale, center);
-          }
+          cancelViewAnimation(state);
+          const limits = this.getMapZoomLimitsFromProps();
+          applyPinchGesture(state, state.touchState.lastCenter, center, scale, limits);
+          this.scheduleDraw();
           state.touchState.lastDistance = distance;
           state.touchState.lastCenter = center;
         }
