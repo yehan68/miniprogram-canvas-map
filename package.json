@@ -1,0 +1,12 @@
+{
+  "name": "miniprogram-canvas-map-workspace",
+  "private": true,
+  "description": "miniprogram-canvas-map 组件源码与演示小程序",
+  "scripts": {
+    "test": "node scripts/test-canvas-map.js",
+    "build:world-data": "node scripts/build-world-data.js",
+    "build:example-npm": "node scripts/build-example-npm.js",
+    "install:example": "npm install --prefix example && npm run build:example-npm",
+    "publish:package": "npm run build:world-data && npm test && npm publish ./packages/miniprogram-canvas-map --access public --registry=https://registry.npmjs.org"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "miniprogram-canvas-map-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "miniprogram-canvas-map 演示小程序",
+  "scripts": {
+    "postinstall": "node ../scripts/build-example-npm.js"
+  },
+  "dependencies": {
+    "miniprogram-canvas-map": "file:../packages/miniprogram-canvas-map"
+  }
+}

@@ -1,0 +1,18 @@
+<view class="canvas-map" style="{{containerStyle}}">
+  <text wx:if="{{showStatus}}" class="canvas-map__status">{{mapStatus}}</text>
+  <view wx:if="{{tileLoading}}" class="canvas-map__loading" aria-hidden="true">
+    <view class="canvas-map__loading-dot"></view>
+    <text class="canvas-map__loading-text">瓦片加载中</text>
+  </view>
+  <view wx:if="{{showReset}}" class="canvas-map__reset" bindtap="onResetTap">复位</view>
+  <canvas
+    id="world-map"
+    type="2d"
+    class="canvas-map__canvas"
+    canvas-id="world-map-canvas"
+    catchtouchstart="onMapTouchStart"
+    catchtouchmove="onMapTouchMove"
+    catchtouchend="onMapTouchEnd"
+    catchtouchcancel="onMapTouchEnd"
+  ></canvas>
+</view>

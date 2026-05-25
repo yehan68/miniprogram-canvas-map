@@ -1,0 +1,262 @@
+<view class="page">
+  <view class="map-panel">
+    <canvas-map
+      id="map"
+      class="map-host"
+      polygons="{{polygons}}"
+      overlay="{{overlay}}"
+      tiles="{{tiles}}"
+      token="{{token}}"
+      hide-vector-when-tiles="{{hideVectorWhenTiles}}"
+      theme="{{theme}}"
+      projection="{{projection}}"
+      background="{{background}}"
+      bind:ready="onMapReady"
+      bind:tap="onTap"
+      bind:zoom="onZoom"
+    ></canvas-map>
+  </view>
+
+  <scroll-view class="control-scroll" scroll-y>
+    <view class="status-bar">
+      <text class="status-bar__main">canvas-map 演示</text>
+      <text class="status-bar__meta">{{projectionLabel}} · 级别 {{mapZoom != null ? mapZoom : '—'}} · 选中 {{selectedLabel}}</text>
+      <text class="status-bar__tap">{{lastTapText}}</text>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">底图面数据</text>
+      <text class="control-section__desc">属性 polygons（底图面），不传则无面；可单独用瓦片或 overlay 叠加。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{basePreset === 'empty' ? 'is-active' : ''}}"
+          data-preset="empty"
+          bindtap="onBasePresetChange"
+        >空</view>
+        <view
+          class="chip {{basePreset === 'world' ? 'is-active' : ''}}"
+          data-preset="world"
+          bindtap="onBasePresetChange"
+        >世界面</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">瓦片底图</text>
+      <text class="control-section__desc">属性 tiles：off / osm / gaode / baidu 等；token 填天地图 key。详见组件 README。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{tilePreset === 'off' ? 'is-active' : ''}}"
+          data-preset="off"
+          bindtap="onTilePresetChange"
+        >关闭</view>
+        <view
+          class="chip {{tilePreset === 'osm' ? 'is-active' : ''}}"
+          data-preset="osm"
+          bindtap="onTilePresetChange"
+        >OSM</view>
+        <view
+          class="chip {{tilePreset === 'carto' ? 'is-active' : ''}}"
+          data-preset="carto"
+          bindtap="onTilePresetChange"
+        >Carto</view>
+        <view
+          class="chip {{tilePreset === 'gaode' ? 'is-active' : ''}}"
+          data-preset="gaode"
+          bindtap="onTilePresetChange"
+        >高德</view>
+        <view
+          class="chip {{tilePreset === 'baidu' ? 'is-active' : ''}}"
+          data-preset="baidu"
+          bindtap="onTilePresetChange"
+        >百度</view>
+        <view
+          class="chip {{tilePreset === 'tencent' ? 'is-active' : ''}}"
+          data-preset="tencent"
+          bindtap="onTilePresetChange"
+        >腾讯</view>
+        <view
+          class="chip {{tilePreset === 'tianditu' ? 'is-active' : ''}}"
+          data-preset="tianditu"
+          bindtap="onTilePresetChange"
+        >天地图</view>
+        <view
+          class="chip {{tilePreset === 'geoq' ? 'is-active' : ''}}"
+          data-preset="geoq"
+          bindtap="onTilePresetChange"
+        >GeoQ</view>
+      </view>
+      <view class="token-row">
+        <text class="token-row__label">天地图 tk</text>
+        <input
+          class="token-row__input"
+          type="text"
+          placeholder="申请 key 后填入"
+          value="{{token}}"
+          bindinput="onTokenInput"
+        />
+      </view>
+
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">投影方式</text>
+      <text class="control-section__desc">属性 projection：mercator 墨卡托 / equirectangular 经纬度；瓦片在两种投影下均可显示。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{projection === 'mercator' ? 'is-active' : ''}}"
+          data-projection="mercator"
+          bindtap="onProjectionChange"
+        >墨卡托</view>
+        <view
+          class="chip {{projection === 'equirectangular' ? 'is-active' : ''}}"
+          data-projection="equirectangular"
+          bindtap="onProjectionChange"
+        >经纬度</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">视图操作</text>
+      <text class="control-section__desc">双指连续缩放，松手吸附最近层级；方法 zoom(level) / flyTo(target)。</text>
+      <view class="chip-row">
+        <view class="chip chip--primary" bindtap="onMapReset">复位视图</view>
+        <view class="chip chip--primary" bindtap="onFlyToSelected">飞往选中</view>
+        <view class="chip" bindtap="onFitToOverlay">适配叠加</view>
+        <view class="chip" bindtap="onFlyToBeijing">飞北京</view>
+        <view class="chip" bindtap="onFlyToJingHu">京沪范围</view>
+        <view class="chip" bindtap="onFlyToSouth">华南范围</view>
+      </view>
+      <view class="chip-row">
+        <view class="chip chip--primary" bindtap="onExportPng">导出 PNG</view>
+        <view class="chip" bindtap="onSavePngToAlbum">保存相册</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">主题 theme</text>
+      <text class="control-section__desc">一套属性控制底图面与叠加默认配色：default / warm / ocean。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{theme === 'default' ? 'is-active' : ''}}"
+          data-preset="default"
+          bindtap="onThemeChange"
+        >默认</view>
+        <view
+          class="chip {{theme === 'warm' ? 'is-active' : ''}}"
+          data-preset="warm"
+          bindtap="onThemeChange"
+        >暖色</view>
+        <view
+          class="chip {{theme === 'ocean' ? 'is-active' : ''}}"
+          data-preset="ocean"
+          bindtap="onThemeChange"
+        >海洋</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">容器背景</text>
+      <text class="control-section__desc">属性 background：纯色、transparent、CSS 渐变。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{bgPreset === 'solid' ? 'is-active' : ''}}"
+          data-preset="solid"
+          bindtap="onBgPresetChange"
+        >纯色</view>
+        <view
+          class="chip {{bgPreset === 'gradient' ? 'is-active' : ''}}"
+          data-preset="gradient"
+          bindtap="onBgPresetChange"
+        >渐变</view>
+        <view
+          class="chip {{bgPreset === 'transparent' ? 'is-active' : ''}}"
+          data-preset="transparent"
+          bindtap="onBgPresetChange"
+        >透明</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">叠加层（点线面）</text>
+      <text class="control-section__desc">属性 overlay，可选。不传则无点线面叠加。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{overlayPreset === 'empty' ? 'is-active' : ''}}"
+          data-preset="empty"
+          bindtap="onOverlayPresetChange"
+        >空</view>
+        <view
+          class="chip {{overlayPreset === 'default' ? 'is-active' : ''}}"
+          data-preset="default"
+          bindtap="onOverlayPresetChange"
+        >京沪示例</view>
+        <view
+          class="chip {{overlayPreset === 'south' ? 'is-active' : ''}}"
+          data-preset="south"
+          bindtap="onOverlayPresetChange"
+      >华南示例</view>
+    </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">点绘制样式</text>
+      <text class="control-section__desc">renderType：circle / pin / diamond / custom。custom 需 setPointDrawer(fn) 自定义 Canvas 绘制。</text>
+      <view class="chip-row">
+        <view
+          class="chip {{pointRenderPreset === 'circle' ? 'is-active' : ''}}"
+          data-preset="circle"
+          bindtap="onPointRenderChange"
+        >圆形</view>
+        <view
+          class="chip {{pointRenderPreset === 'pin' ? 'is-active' : ''}}"
+          data-preset="pin"
+          bindtap="onPointRenderChange"
+        >图钉</view>
+        <view
+          class="chip {{pointRenderPreset === 'diamond' ? 'is-active' : ''}}"
+          data-preset="diamond"
+          bindtap="onPointRenderChange"
+        >菱形</view>
+        <view
+          class="chip {{pointRenderPreset === 'custom' ? 'is-active' : ''}}"
+          data-preset="custom"
+          bindtap="onPointRenderChange"
+        >自定义</view>
+      </view>
+    </view>
+
+    <view class="control-section">
+      <text class="control-section__title">事件</text>
+      <text class="control-section__desc">推荐只用 bind:tap，detail.type 为 point / line / polygon / area / blank。</text>
+    </view>
+
+    <view class="doc-section">
+      <text class="doc-section__title">组件属性</text>
+      <view class="doc-item" wx:for="{{apiProperties}}" wx:key="name">
+        <view class="doc-item__head">
+          <text class="doc-item__name">{{item.name}}</text>
+          <text class="doc-item__type">{{item.type}}</text>
+        </view>
+        <text class="doc-item__desc">{{item.desc}}</text>
+      </view>
+    </view>
+
+    <view class="doc-section">
+      <text class="doc-section__title">组件方法</text>
+      <text class="doc-section__hint">const map = this.selectComponent('#map')，详见 components/canvas-map/README.md</text>
+      <view class="doc-item" wx:for="{{apiMethods}}" wx:key="name">
+        <text class="doc-item__name doc-item__name--mono">{{item.name}}</text>
+        <text class="doc-item__desc">{{item.desc}}</text>
+      </view>
+    </view>
+
+    <view class="doc-section doc-section--last">
+      <text class="doc-section__title">组件事件</text>
+      <view class="doc-item" wx:for="{{apiEvents}}" wx:key="name">
+        <text class="doc-item__name doc-item__name--mono">{{item.name}}</text>
+        <text class="doc-item__desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

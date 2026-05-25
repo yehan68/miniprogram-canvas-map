@@ -1,0 +1,13 @@
+node_modules/
+miniprogram_npm/
+.DS_Store
+*.log
+*.tgz
+.npm/
+example/miniprogram_npm/
+example/node_modules/
+project.private.config.json
+**/project.private.config.json
+.env
+.env.*
+!.env.example
